@@ -1,0 +1,125 @@
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f0f9;
+    font-size: 1.4em;
+}
+
+.page-header {
+    background: linear-gradient(135deg, #9b59b6 0%, #bb8fce 100%);
+    color: white;
+    padding: 40px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+    margin: 0;
+    margin-bottom: 40px;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-weight: 300;
+    font-size: 26pt;
+}
+
+.page-header h1 a {
+    color: white;
+    text-decoration: none;
+    font-size: 26pt;
+}
+
+.page-header h1 a:hover {
+    color: #e8d5f2;
+}
+
+.page-header h1 a:visited {
+    color: white;
+    font-size: 36pt;
+    text-decoration: none;
+}
+
+.content {
+    padding-bottom: 40px;
+    /* margin-left: 40px; */
+}
+
+.save {
+    float: right;
+}
+
+.post {
+    background-color: white;
+    padding: 30px;
+    margin-bottom: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: box-shadow 0.3s ease;
+}
+
+.post:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+.post .date {
+    color: #999;
+    font-size: 0.9em;
+    margin-bottom: 10px;
+}
+
+.post h1 {
+    font-size: 2em;
+    margin: 10px 0 20px 0;
+}
+
+.post h1 a {
+    color: #333;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.post h1 a:hover {
+    color: #9b59b6;
+}
+
+.post p {
+    color: #555;
+    line-height: 1.8;
+    margin-bottom: 20px;
+}
+
+.post-form textarea, .post-form input {
+    width: 100%;
+}
+
+.top-menu, .top-menu:hover, .top-menu:visited {
+    color: #ffffff;
+    float: right;
+    font-size: 26pt;
+    margin-right: 20px;
+}
+
+.blog-image-list {
+    max-width: 100%;
+    height: auto;
+    margin-top: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    object-fit: cover;
+}
+
+.rounded {
+    border-radius: 8px;
+}
+
+footer {
+    background-color: #333;
+    color: white;
+    padding: 20px 0;
+    margin-top: 40px;
+    text-align: center;
+    /* margin-bottom: 0; */
+    position: relative;
+    transform: translateY(-100%);
+}
