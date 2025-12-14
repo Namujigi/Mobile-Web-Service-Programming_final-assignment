@@ -1,0 +1,2 @@
+서비스 URL: https://namujigi.pythonanywhere.com/
+소스코드 git URL: https://github.com/Namujigi/Mobile-Web-Service-Programming_final-assignment
