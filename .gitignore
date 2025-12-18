@@ -1,6 +1,7 @@
 .venv/
 .myvenv/
 
+.claude/
 temp.py
 
 # Byte-compiled / optimized / DLL files

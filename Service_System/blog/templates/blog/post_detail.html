@@ -16,8 +16,22 @@
         
         <h1>{{ post.title }}</h1>
         <p>{{ post.text|linebreaksbr }}</p>
+
+        {% if post.video %}
+            <div class="video-container" style="margin: 20px 0;">
+                <h3>낙상 감지 영상 (12초)</h3>
+                <video controls width="100%" style="max-width: 800px; border: 2px solid #ddd; border-radius: 8px;">
+                    <source src="{{post.video.url}}" type="video/mp4">
+                    브라우저가 비디오 재생을 지원하지 않습니다.
+                </video>
+            </div>
+        {% endif %}
+
         {% if post.image %}
-            <img src="{{post.image.url}}" class="rounded blog-image-list" alt="{{post.title}}">
+            <div class="image-container" style="margin: 20px 0;">
+                <h3>낙상 감지 시점 스냅샷</h3>
+                <img src="{{post.image.url}}" class="rounded blog-image-list" alt="{{post.title}}" style="max-width: 800px; border: 2px solid #ddd; border-radius: 8px;">
+            </div>
         {% endif %}
     </div>
 {% endblock %}
