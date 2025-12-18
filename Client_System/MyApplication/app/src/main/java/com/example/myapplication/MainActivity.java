@@ -46,8 +46,8 @@ public class MainActivity extends AppCompatActivity {
     private static final String IMAGE_CACHE_DIR = "blog_images";
 
     TextView textView;
-    String site_url = "http://10.0.2.2:8000"; // "https://namujigi.pythonanywhere.com";
-    String token = "b20a99552f490b8dc9d9cd07c374569a967241ae"; //"cd8a230f97def11bf83669c8ca20fbe80f08a495";
+    String site_url = "https://namujigi.pythonanywhere.com"; // "http://10.0.2.2:8000";
+    String token = "ff233a634d80c02f857861cb279ea0d24264ea8c"; // "b20a99552f490b8dc9d9cd07c374569a967241ae";
     CloadPosts taskDownload;
     private RecyclerView recyclerView;
     private PostAdapter postAdapter;
