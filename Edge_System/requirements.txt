@@ -1,7 +1,24 @@
-torch>=2.0.0
-torchvision>=0.15.0
-ultralytics>=8.0.0
-opencv-python>=4.8.0
-numpy>=1.24.0
-requests>=2.31.0
-Pillow>=10.0.0
+# 고령자 낙상 감지 Edge System
+# YOLOv11n-pose 단독 사용
+
+# 핵심 라이브러리
+ultralytics>=8.3.0      # YOLOv11/YOLOv8 통합 라이브러리
+opencv-python>=4.8.0    # 영상 처리
+numpy>=1.24.0           # 수치 연산
+
+# 딥러닝 프레임워크
+torch>=2.0.0            # PyTorch
+torchvision>=0.15.0     # PyTorch 비전 라이브러리
+
+# 통신
+requests>=2.31.0        # HTTP 요청 (Django API)
+
+# 환경 변수 관리
+python-dotenv>=1.0.0    # .env 파일 로드
+
+# 이미지 처리
+Pillow>=10.0.0          # 이미지 저장 및 변환
+
+# 선택사항 (성능 향상)
+# onnx>=1.15.0          # ONNX 변환 (배포용)
+# onnxruntime-gpu>=1.16.0  # ONNX GPU 추론

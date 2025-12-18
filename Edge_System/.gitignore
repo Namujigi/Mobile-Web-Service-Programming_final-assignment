@@ -23,6 +23,9 @@ wheels/
 .installed.cfg
 *.egg
 
+# 환경 변수 (민감한 정보)
+.env
+
 # YOLO models
 *.pt
 *.weights
@@ -30,6 +33,13 @@ wheels/
 
 # Fall detection images
 fall_detections/
+
+# Fall detection videos
+fall_videos/
+*.mp4
+*.avi
+
+# Image files
 *.jpg
 *.png
 *.jpeg
