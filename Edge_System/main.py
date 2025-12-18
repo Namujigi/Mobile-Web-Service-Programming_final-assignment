@@ -63,15 +63,18 @@ class FallDetectionSystem:
         }
 
         # 비디오 녹화용 프레임 버퍼 (낙상 감지 전 7초 저장)
+        # 프레임과 타임스탬프를 함께 저장
         buffer_size = int(config.VIDEO_FPS * config.VIDEO_BUFFER_SECONDS)
         self.frame_buffer = deque(maxlen=buffer_size)
 
         # 낙상 감지 후 녹화 상태
         self.recording_fall = False
         self.fall_video_frames = []
+        self.fall_video_timestamps = []  # 프레임 타임스탬프 저장
         self.frames_after_fall = 0
         self.frames_to_record_after = int(config.VIDEO_FPS * config.VIDEO_RECORD_AFTER_SECONDS)
         self.current_fall_info = None
+        self.recording_start_time = None
 
         logger.info("System initialized successfully")
 
@@ -127,12 +130,15 @@ class FallDetectionSystem:
 
                 self.stats['total_frames'] += 1
 
+                # 현재 시간 저장
+                current_time = time.time()
+
                 # 낙상 감지 처리
                 processed_frame, is_fall_detected, fall_info = self.detector.process_frame(frame)
 
-                # 프레임 버퍼에 원본 프레임 저장 (낙상 감지 전 5초 보관)
+                # 프레임 버퍼에 원본 프레임과 타임스탬프 저장 (낙상 감지 전 7초 보관)
                 if not self.recording_fall:
-                    self.frame_buffer.append(frame.copy())
+                    self.frame_buffer.append((frame.copy(), current_time))
 
                 # 낙상 감지 시 처리
                 if is_fall_detected and not self.recording_fall:
@@ -140,23 +146,28 @@ class FallDetectionSystem:
                     self.recording_fall = True
                     self.current_fall_info = fall_info
                     self.frames_after_fall = 0
-                    # 버퍼의 프레임들을 비디오 프레임 리스트로 복사 (낙상 전 5초)
-                    self.fall_video_frames = list(self.frame_buffer)
+                    self.recording_start_time = current_time
+                    # 버퍼의 프레임들과 타임스탬프를 비디오 리스트로 복사 (낙상 전 7초)
+                    self.fall_video_frames = [f[0] for f in self.frame_buffer]  # 프레임만 추출
+                    self.fall_video_timestamps = [f[1] for f in self.frame_buffer]  # 타임스탬프만 추출
                     logger.info(f"Started recording fall video. Buffer frames: {len(self.fall_video_frames)}")
 
                 # 낙상 감지 후 추가 녹화
                 if self.recording_fall:
                     self.fall_video_frames.append(frame.copy())
+                    self.fall_video_timestamps.append(current_time)
                     self.frames_after_fall += 1
 
                     # 낙상 후 5초 녹화 완료
                     if self.frames_after_fall >= self.frames_to_record_after:
                         logger.info(f"Finished recording fall video. Total frames: {len(self.fall_video_frames)}")
-                        self.handle_fall_detection(self.current_fall_info, self.fall_video_frames)
+                        self.handle_fall_detection(self.current_fall_info, self.fall_video_frames, self.fall_video_timestamps)
                         # 녹화 상태 초기화
                         self.recording_fall = False
                         self.fall_video_frames = []
+                        self.fall_video_timestamps = []
                         self.current_fall_info = None
+                        self.recording_start_time = None
 
                 # FPS 표시
                 if config.SHOW_FPS:
@@ -196,7 +207,7 @@ class FallDetectionSystem:
         finally:
             self.cleanup()
 
-    def handle_fall_detection(self, fall_info: dict, video_frames: list = None):
+    def handle_fall_detection(self, fall_info: dict, video_frames: list = None, video_timestamps: list = None):
         """낙상 감지 처리"""
         logger.warning("=" * 60)
         logger.warning("FALL DETECTED!")
@@ -212,7 +223,7 @@ class FallDetectionSystem:
         # 낙상 비디오 저장 (12초)
         video_path = None
         if video_frames and config.SAVE_FALL_VIDEOS:
-            video_path = self.save_fall_video(fall_info, video_frames)
+            video_path = self.save_fall_video(fall_info, video_frames, video_timestamps)
 
         # Django 서버로 알림 전송 (이미지 + 비디오)
         try:
@@ -226,20 +237,33 @@ class FallDetectionSystem:
         except Exception as e:
             logger.error(f"Error sending fall alert: {e}")
 
-    def save_fall_video(self, fall_info: dict, video_frames: list) -> str:
+    def save_fall_video(self, fall_info: dict, video_frames: list, video_timestamps: list = None) -> str:
         """낙상 비디오 저장 (12초)"""
         timestamp = fall_info['timestamp'].strftime("%Y%m%d_%H%M%S")
         video_filename = f"fall_{timestamp}.mp4"
         video_path = Path(config.FALL_VIDEOS_DIR) / video_filename
 
         try:
+            # 실제 FPS 계산 (타임스탬프가 있는 경우)
+            actual_fps = config.VIDEO_FPS  # 기본값
+            if video_timestamps and len(video_timestamps) > 1:
+                # 실제 경과 시간 계산
+                total_duration = video_timestamps[-1] - video_timestamps[0]
+                if total_duration > 0:
+                    actual_fps = (len(video_frames) - 1) / total_duration
+                    logger.info(f"Calculated actual FPS: {actual_fps:.2f} (from {len(video_frames)} frames over {total_duration:.2f}s)")
+                else:
+                    logger.warning("Video duration is 0, using config FPS")
+            else:
+                logger.warning("No timestamps available, using config FPS")
+
             # 비디오 작성기 초기화
             height, width = video_frames[0].shape[:2]
             fourcc = cv2.VideoWriter_fourcc(*config.VIDEO_CODEC)
             video_writer = cv2.VideoWriter(
                 str(video_path),
                 fourcc,
-                config.VIDEO_FPS,
+                actual_fps,  # 실제 FPS 사용
                 (width, height)
             )
 
@@ -248,7 +272,7 @@ class FallDetectionSystem:
                 video_writer.write(frame)
 
             video_writer.release()
-            logger.info(f"Fall video saved: {video_path} ({len(video_frames)} frames)")
+            logger.info(f"Fall video saved: {video_path} ({len(video_frames)} frames @ {actual_fps:.2f}fps)")
             return str(video_path)
 
         except Exception as e:

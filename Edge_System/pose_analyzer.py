@@ -55,14 +55,19 @@ class PoseAnalyzer:
 
         # 가중치 설정 (V2의 핵심 개선)
         self.weights = config.get('weights', {
-            'aspect_ratio': 0.35,
-            'low_position': 0.20,
-            'horizontal_body': 0.25,
-            'body_angle': 0.20
+            'aspect_ratio': 0.25,
+            'low_position': 0.15,
+            'horizontal_body': 0.20,
+            'body_angle': 0.15,
+            'sudden_change': 0.25  # 갑작스러운 변화 가중치
         })
 
         # 낙상 점수 임계값
         self.fall_score_threshold = config.get('fall_score_threshold', 0.6)
+
+        # 이전 프레임 정보 저장 (갑작스러운 변화 감지용)
+        self.previous_aspect_ratio = None
+        self.aspect_ratio_change_threshold = 0.8  # 변화율 임계값
 
         logger.debug(f"PoseAnalyzer initialized with threshold: {self.fall_score_threshold}")
 
@@ -101,7 +106,9 @@ class PoseAnalyzer:
                 'aspect_score': 0.0,
                 'position_score': 0.0,
                 'horizontal_score': 0.0,
-                'angle_score': 0.0
+                'angle_score': 0.0,
+                'sudden_change_score': 0.0,
+                'aspect_ratio_delta': 0.0
             }
         }
 
@@ -110,8 +117,9 @@ class PoseAnalyzer:
         position_score = 0.0
         horizontal_score = 0.0
         angle_score = 0.0
+        sudden_change_score = 0.0
 
-        # ========== 1. 바운딩 박스 가로/세로 비율 분석 ==========
+        # ========== 1. 바운딩 박스 가로/세로 비율 분석 + 갑작스러운 변화 감지 ==========
         if bbox_height > 0:
             aspect_ratio = bbox_width / bbox_height
             result['details']['bbox_aspect_ratio'] = aspect_ratio
@@ -122,7 +130,24 @@ class PoseAnalyzer:
                 aspect_score = min(1.0, (aspect_ratio - self.aspect_ratio_threshold) / 1.0)
                 result['reason'] += f'Wide bbox({aspect_ratio:.2f}); '
 
+            # 갑작스러운 변화 감지 (이전 프레임과 비교)
+            if self.previous_aspect_ratio is not None:
+                # 변화율 계산 (절대값)
+                aspect_ratio_delta = abs(aspect_ratio - self.previous_aspect_ratio)
+                result['details']['aspect_ratio_delta'] = aspect_ratio_delta
+
+                # 변화율이 임계값 이상이고, 가로로 누워진 경우 (서있다가 갑자기 누움)
+                if aspect_ratio_delta > self.aspect_ratio_change_threshold and aspect_ratio > self.aspect_ratio_threshold:
+                    # 변화가 클수록 점수 증가
+                    sudden_change_score = min(1.0, aspect_ratio_delta / 1.5)
+                    result['reason'] += f'Sudden change(Δ={aspect_ratio_delta:.2f}); '
+                    logger.debug(f"Sudden aspect ratio change detected: {self.previous_aspect_ratio:.2f} -> {aspect_ratio:.2f} (Δ={aspect_ratio_delta:.2f})")
+
+            # 현재 aspect_ratio를 다음 프레임을 위해 저장
+            self.previous_aspect_ratio = aspect_ratio
+
         result['details']['aspect_score'] = aspect_score
+        result['details']['sudden_change_score'] = sudden_change_score
 
         # ========== 2. 바운딩 박스 위치 분석 (낮은 위치) ==========
         bbox_center_y = (y1 + y2) / 2
@@ -180,10 +205,11 @@ class PoseAnalyzer:
 
         # ========== 4. 가중치 적용 최종 점수 계산 ==========
         weighted_score = (
-            aspect_score * self.weights.get('aspect_ratio', 0.35) +
-            position_score * self.weights.get('low_position', 0.20) +
-            horizontal_score * self.weights.get('horizontal_body', 0.25) +
-            angle_score * self.weights.get('body_angle', 0.20)
+            aspect_score * self.weights.get('aspect_ratio', 0.25) +
+            position_score * self.weights.get('low_position', 0.15) +
+            horizontal_score * self.weights.get('horizontal_body', 0.20) +
+            angle_score * self.weights.get('body_angle', 0.15) +
+            sudden_change_score * self.weights.get('sudden_change', 0.25)
         )
 
         result['fall_score'] = weighted_score
@@ -318,9 +344,11 @@ class PoseAnalyzer:
 - 낮은 위치: {details['position_score']:.3f} x {self.weights['low_position']} = {details['position_score'] * self.weights['low_position']:.3f}
 - 수평 자세: {details['horizontal_score']:.3f} x {self.weights['horizontal_body']} = {details['horizontal_score'] * self.weights['horizontal_body']:.3f}
 - 몸통 각도: {details['angle_score']:.3f} x {self.weights['body_angle']} = {details['angle_score'] * self.weights['body_angle']:.3f}
+- 갑작스러운 변화: {details['sudden_change_score']:.3f} x {self.weights['sudden_change']} = {details['sudden_change_score'] * self.weights['sudden_change']:.3f}
 
 측정값:
 - 바운딩 박스 비율: {details['bbox_aspect_ratio']:.2f}
+- 비율 변화량: {details['aspect_ratio_delta']:.2f}
 - 몸통 각도: {details['body_angle']:.1f}°
 - 높이 비율: {details['head_height_ratio']:.2f}
 - 수평 비율: {details['horizontal_ratio']:.2f}

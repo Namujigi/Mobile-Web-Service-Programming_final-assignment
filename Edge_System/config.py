@@ -58,10 +58,11 @@ FALL_DETECTION_PARAMS = {
 
     # 낙상 점수 가중치 (합계 = 1.0)
     'weights': {
-        'aspect_ratio': 0.35,      # 가로/세로 비율 가중치
-        'low_position': 0.20,      # 낮은 위치 가중치
-        'horizontal_body': 0.25,   # 수평 자세 가중치
-        'body_angle': 0.20         # 몸통 각도 가중치
+        'aspect_ratio': 0.25,      # 가로/세로 비율 가중치
+        'low_position': 0.15,      # 낮은 위치 가중치
+        'horizontal_body': 0.20,   # 수평 자세 가중치
+        'body_angle': 0.15,        # 몸통 각도 가중치
+        'sudden_change': 0.25      # 갑작스러운 변화 가중치 (가장 중요)
     },
 
     # 낙상 점수 임계값
