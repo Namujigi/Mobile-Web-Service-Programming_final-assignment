@@ -78,7 +78,7 @@ FALL_VIDEOS_DIR = "fall_videos"  # 낙상 비디오 저장 디렉토리
 # 비디오 녹화 설정
 VIDEO_BUFFER_SECONDS = 7  # 낙상 감지 전 버퍼 시간 (초)
 VIDEO_RECORD_AFTER_SECONDS = 5  # 낙상 감지 후 녹화 시간 (초)
-VIDEO_CODEC = 'mp4v'  # 비디오 코덱 (mp4v, H264, XVID)
+VIDEO_CODEC = 'H264'  # 비디오 코덱 (mp4v, H264, XVID)
 VIDEO_FPS = 30  # 비디오 FPS
 
 # 디버그 설정
