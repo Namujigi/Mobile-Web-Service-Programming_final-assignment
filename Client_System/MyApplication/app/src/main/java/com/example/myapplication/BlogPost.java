@@ -11,9 +11,10 @@ public class BlogPost {
     private String imageUrl;
     private Bitmap imageBitmap;
     private boolean imageVisible;
+    private String videoUrl;
 
     public BlogPost(int author, String title, String text, String created_date,
-                    String published_date, String imageUrl, Bitmap imageBitmap) {
+                    String published_date, String imageUrl, Bitmap imageBitmap, String videoUrl) {
         this.author = author;
         this.title = title;
         this.text = text;
@@ -22,6 +23,7 @@ public class BlogPost {
         this.imageUrl = imageUrl;
         this.imageBitmap = imageBitmap;
         this.imageVisible = true; // 초기 상태: 보임
+        this.videoUrl = videoUrl;
     }
 
     // Getters and Setters
@@ -48,4 +50,7 @@ public class BlogPost {
 
     public boolean isImageVisible() { return imageVisible; }
     public void setImageVisible(boolean imageVisible) { this.imageVisible = imageVisible; }
+
+    public String getVideoUrl() { return videoUrl; }
+    public void setVideoUrl(String videoUrl) { this.videoUrl = videoUrl; }
 }

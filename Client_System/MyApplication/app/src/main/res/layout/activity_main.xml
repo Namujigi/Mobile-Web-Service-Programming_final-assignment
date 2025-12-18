@@ -29,33 +29,14 @@
             android:maxLines="1"
             android:ellipsize="end" />
 
-        <LinearLayout
+        <Button
+            android:id="@+id/buttonDownload"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center">
-
-            <Button
-                android:id="@+id/buttonDownload"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_margin="4dp"
-                android:text="동기화"
-                android:onClick="onClickDownload"
-                android:backgroundTint="#7B1FA2" />
-
-            <Button
-                android:id="@+id/buttonUpload"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_margin="4dp"
-                android:text="업로드"
-                android:onClick="onClickUpload"
-                android:backgroundTint="#7B1FA2" />
-
-        </LinearLayout>
+            android:layout_margin="4dp"
+            android:text="동기화"
+            android:onClick="onClickDownload"
+            android:backgroundTint="#7B1FA2" />
     </LinearLayout>
 
     <!-- Content -->

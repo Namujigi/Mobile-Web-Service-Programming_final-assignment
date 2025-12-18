@@ -60,6 +60,24 @@
             android:layout_marginTop="8dp"
             android:contentDescription="게시글 이미지" />
 
+        <androidx.media3.ui.PlayerView
+            android:id="@+id/playerViewItem"
+            android:layout_width="match_parent"
+            android:layout_height="250dp"
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/tvVideoLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="낙상 감지 영상 (12초)"
+            android:textSize="12sp"
+            android:textColor="#9C27B0"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
     </LinearLayout>
 
 </androidx.cardview.widget.CardView>

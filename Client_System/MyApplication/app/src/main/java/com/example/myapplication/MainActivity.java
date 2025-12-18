@@ -46,12 +46,9 @@ public class MainActivity extends AppCompatActivity {
     private static final String IMAGE_CACHE_DIR = "blog_images";
 
     TextView textView;
-    String site_url = "https://namujigi.pythonanywhere.com";
-    String token = "cd8a230f97def11bf83669c8ca20fbe80f08a495";
+    String site_url = "http://10.0.2.2:8000"; // "https://namujigi.pythonanywhere.com";
+    String token = "b20a99552f490b8dc9d9cd07c374569a967241ae"; //"cd8a230f97def11bf83669c8ca20fbe80f08a495";
     CloadPosts taskDownload;
-    UploadPost taskUpload;
-    private Uri selectedImageUri = null;
-    String[] permissions;
     private RecyclerView recyclerView;
     private PostAdapter postAdapter;
     private List<BlogPost> blogPosts = new ArrayList<>();
@@ -66,6 +63,23 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         loadFromCache();
+
+        // 알림 권한 요청 (Android 13+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.POST_NOTIFICATIONS}, 101);
+            }
+        }
+
+        // WebSocket Service 시작
+        Intent serviceIntent = new Intent(this, WebSocketService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
     }
 
     public void onClickDownload(View v) {
@@ -77,104 +91,6 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(getApplicationContext(), "동기화 중...", Toast.LENGTH_LONG).show();
     }
 
-    public void onClickUpload(View v) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissions = new String[]{ Manifest.permission.READ_MEDIA_IMAGES };
-        } else {
-            permissions = new String[]{ Manifest.permission.READ_EXTERNAL_STORAGE };
-        }
-
-        if (ContextCompat.checkSelfPermission(this, permissions[0]) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, permissions, 100);
-        } else {
-            Intent intent = new Intent(Intent.ACTION_PICK);
-            intent.setType("image/*");
-            startActivityForResult(intent, PICK_IMAGE);
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        if (requestCode == 100) { // 100은 onClickUpload에서 요청한 코드
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // 권한 승인됨
-                Intent intent = new Intent(Intent.ACTION_PICK);
-                intent.setType("image/*");
-                startActivityForResult(intent, PICK_IMAGE);
-            } else {
-                // 권한 거부됨
-                Toast.makeText(this, "이미지 접근 권한이 필요합니다.", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == PICK_IMAGE && resultCode == RESULT_OK && data != null) {
-            selectedImageUri = data.getData();
-            showUploadDialog();
-        }
-    }
-
-    private void showUploadDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        View dialogView = getLayoutInflater().inflate(R.layout.dialog_upload, null);
-        EditText etTitle = dialogView.findViewById(R.id.etTitle);
-        EditText etText = dialogView.findViewById(R.id.etText);
-        ImageView ivPreview = dialogView.findViewById(R.id.ivPreview);
-
-        try {
-            Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), selectedImageUri);
-            ivPreview.setImageBitmap(bitmap);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        builder.setView(dialogView);
-        builder.setTitle("새 게시글 작성");
-        builder.setPositiveButton("업로드", (dialog, which) -> {
-            String title = etTitle.getText().toString().trim();
-            String text = etText.getText().toString().trim();
-            if (title.isEmpty() || text.isEmpty()) {
-                Toast.makeText(this, "제목과 내용을 입력하세요", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            uploadPost(title, text);
-        });
-        builder.setNegativeButton("취소", null);
-        builder.show();
-    }
-
-    private void uploadPost(String title, String text) {
-        String imagePath = getPathFromUri(selectedImageUri);
-        if (imagePath == null) {
-            Toast.makeText(this, "이미지를 찾을 수 없습니다", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if (taskUpload != null && taskUpload.getStatus() == AsyncTask.Status.RUNNING) {
-            taskUpload.cancel(true);
-        }
-        taskUpload = new UploadPost();
-        taskUpload.execute(title, text, imagePath);
-        Toast.makeText(this, "업로드 중...", Toast.LENGTH_SHORT).show();
-    }
-
-    private String getPathFromUri(Uri contentUri) {
-        String[] proj = {MediaStore.Images.Media.DATA};
-        Cursor cursor = getContentResolver().query(contentUri, proj, null, null, null);
-        if (cursor != null) {
-            int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
-            cursor.moveToFirst();
-            String path = cursor.getString(column_index);
-            cursor.close();
-            return path;
-        }
-        return null;
-    }
 
     // 캐시에 저장
     private void saveToCache(JSONArray jsonArray) {
@@ -250,13 +166,14 @@ public class MainActivity extends AppCompatActivity {
                 String created_date = postJson.optString("created_date", "");
                 String published_date = postJson.optString("published_date", "");
                 String imageUrl = postJson.optString("image", "");
+                String videoUrl = postJson.optString("video", "");
 
                 // 이미지 파일명 추출
                 String imageFileName = imageUrl.substring(imageUrl.lastIndexOf("/") + 1);
                 Bitmap imageBitmap = loadImageFromLocal(imageFileName);
 
                 BlogPost post = new BlogPost(author, title, text, created_date,
-                        published_date, imageUrl, imageBitmap);
+                        published_date, imageUrl, imageBitmap, videoUrl);
                 blogPosts.add(post);
             }
 
@@ -291,7 +208,9 @@ public class MainActivity extends AppCompatActivity {
                     }
                     is.close();
 
-                    JSONArray aryJson = new JSONArray(result.toString());
+                    // Django REST Framework 페이지네이션 처리
+                    JSONObject responseObj = new JSONObject(result.toString());
+                    JSONArray aryJson = responseObj.getJSONArray("results");
 
                     // 이미지 다운로드 및 저장
                     for (int i = 0; i < aryJson.length(); i++) {
@@ -338,94 +257,4 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private class UploadPost extends AsyncTask<String, Void, Boolean> {
-        @Override
-        protected Boolean doInBackground(String... params) {
-            String title = params[0];
-            String text = params[1];
-            String imagePath = params[2];
-            String lineEnd = "\r\n";
-            String twoHyphens = "--";
-            String boundary = "*****" + System.currentTimeMillis() + "*****";
-
-            try {
-                File imageFile = new File(imagePath);
-                FileInputStream fileInputStream = new FileInputStream(imageFile);
-
-                URL url = new URL(site_url + "/api_root/Post/");
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setDoInput(true);
-                conn.setDoOutput(true);
-                conn.setUseCaches(false);
-                conn.setRequestMethod("POST");
-                conn.setRequestProperty("Connection", "Keep-Alive");
-                conn.setRequestProperty("Authorization", "Token " + token);
-                conn.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
-
-                DataOutputStream dos = new DataOutputStream(conn.getOutputStream());
-
-                dos.writeBytes(twoHyphens + boundary + lineEnd);
-                dos.writeBytes("Content-Disposition: form-data; name=\"title\"" + lineEnd);
-                dos.writeBytes(lineEnd);
-                dos.writeBytes(title);
-                dos.writeBytes(lineEnd);
-
-                dos.writeBytes(twoHyphens + boundary + lineEnd);
-                dos.writeBytes("Content-Disposition: form-data; name=\"text\"" + lineEnd);
-                dos.writeBytes(lineEnd);
-                dos.writeBytes(text);
-                dos.writeBytes(lineEnd);
-
-                dos.writeBytes(twoHyphens + boundary + lineEnd);
-                dos.writeBytes("Content-Disposition: form-data; name=\"author\"" + lineEnd);
-                dos.writeBytes(lineEnd);
-                dos.writeBytes("1");
-                dos.writeBytes(lineEnd);
-
-                dos.writeBytes(twoHyphens + boundary + lineEnd);
-                dos.writeBytes("Content-Disposition: form-data; name=\"image\";filename=\"" +
-                        imageFile.getName() + "\"" + lineEnd);
-                dos.writeBytes("Content-Type: image/jpeg" + lineEnd);
-                dos.writeBytes(lineEnd);
-
-                int bytesAvailable = fileInputStream.available();
-                int maxBufferSize = 1024 * 1024;
-                int bufferSize = Math.min(bytesAvailable, maxBufferSize);
-                byte[] buffer = new byte[bufferSize];
-                int bytesRead = fileInputStream.read(buffer, 0, bufferSize);
-
-                while (bytesRead > 0) {
-                    dos.write(buffer, 0, bufferSize);
-                    bytesAvailable = fileInputStream.available();
-                    bufferSize = Math.min(bytesAvailable, maxBufferSize);
-                    bytesRead = fileInputStream.read(buffer, 0, bufferSize);
-                }
-
-                dos.writeBytes(lineEnd);
-                dos.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
-
-                fileInputStream.close();
-                dos.flush();
-                dos.close();
-
-                int responseCode = conn.getResponseCode();
-                return (responseCode == HttpURLConnection.HTTP_OK ||
-                        responseCode == HttpURLConnection.HTTP_CREATED);
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                return false;
-            }
-        }
-
-        @Override
-        protected void onPostExecute(Boolean success) {
-            if (success) {
-                Toast.makeText(MainActivity.this, "업로드 성공!", Toast.LENGTH_SHORT).show();
-                onClickDownload(null);
-            } else {
-                Toast.makeText(MainActivity.this, "업로드 실패", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
 }

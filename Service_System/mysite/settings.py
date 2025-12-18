@@ -32,6 +32,7 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', 'namujigi.pythonanywhere.com
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',  # Channels ASGI server (최상단에 위치)
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -41,6 +42,7 @@ INSTALLED_APPS = [
     'blog',
     'rest_framework',
     'rest_framework.authtoken',
+    'channels',  # WebSocket support
 ]
 
 MIDDLEWARE = [
@@ -136,4 +138,14 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10
+}
+
+# Channels (WebSocket) 설정
+ASGI_APPLICATION = 'mysite.asgi.application'
+
+# 채널 레이어 설정 (메모리 기반 - 개발용)
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer'
+    }
 }

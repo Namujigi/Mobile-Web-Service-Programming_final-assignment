@@ -14,7 +14,7 @@ class blogImage(viewsets.ModelViewSet):
     GET(목록/상세): Admin만 가능
     POST(생성): Admin만 가능
     """
-    queryset = Post.objects.all()
+    queryset = Post.objects.all().order_by('-published_date')
     serializer_class = PostSerializer
     permission_classes = [IsAdminUser]  # Admin만 접근 가능
 
